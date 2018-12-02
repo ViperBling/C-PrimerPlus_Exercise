@@ -25,8 +25,6 @@ int main()
 }
 ```
 
-这种函数的使用方式，类似Python中的lambda函数，但是更为底层。
-
 与宏定义的区别：宏定义是通过文本替换实现的，而不是参数传递，并不是真正的函数调用。
 
 
@@ -200,3 +198,148 @@ char * left(const char * str, int n = 1);
 
 ## 8.5 函数模板
 
+函数模板用于让编译器根据具体类型生成函数，也被称为通用编程。
+
+```C++
+template <typename AnyType>
+void swap(AnyType & a, AnyType & b)
+{
+    AnyType temp;
+    temp = a;
+    a = b;
+    b = temp;
+}
+```
+
+上述代码是一个交换两个元素值的函数模板。下面是具体程序示例，注意，在声明模板的时候，必须要在模板函数的原型和定义处都加上模板声明：
+
+```C++
+#include <iostream>
+using namespace std;
+
+// 第一处模板定义
+template <typename T>
+void Swap(T &a, T &b);
+
+int main()
+{
+    int i = 10;
+    int j = 20;
+    cout << "i, j = " << i << ", " << j << ".\n";
+    cout << "Using compiler-generated int swapper:\n";
+    Swap(i, j);
+    cout << "Now i, j = " << i << ", " << j << ".\n";
+
+    double x = 24.5;
+    double y = 81.7;
+    cout << "x, y = " << x << ", " << y << ".\n";
+    cout << "Using compiler-generated double swapper:\n";
+    Swap(x, y);
+    cout << "Now x, y = " << x << ", " << y << ".\n";
+
+    return 0;
+}
+
+// 第二处模板定义
+template <typename T>
+void Swap(T &a, T &b)
+{
+    T temp;
+    temp = a;
+    a = b;
+    b = temp;
+}
+```
+
+### 8.5.1 重载的模板
+
+模板也可以像函数那样进行重载，同样特征标也是参数列表。
+
+```C++
+template <typename T>
+void Swap(T &a, T &b);
+
+template <typename T>
+void Swap(T *a, T *b, int n);
+```
+
+### 8.5.2 模板的局限性
+
+对于上述交换两个变量值的函数来说，就无法直接应用到结构中。所以编写的模板函数很可能无法处理某些类型。其中一种解决方法就是为特定的类型提供具体化的模板定义。
+
+### 8.5.3 显式具体化
+
+- 对于给定函数名，可以有**非模板版本**、**模板函数**和**显式具体化模板函数**以及它们的**重载版本**。
+- 显式具体化的原型和定义应以```template <>```打头，并通过名称来指定类型
+- 优先级：非模板函数 > 具体化 > 常规模板
+
+```C++
+// 非模板函数
+void Swap(job &, job &);
+
+// 模板函数
+template <typename T>
+void Swap(T &, T &);
+
+// job类型的显式具体化
+template <> void Swap<job>(job &, job &);
+```
+
+### 8.5.4 实例化和具体化
+
+在代码中包含函数模板本身不会生成函数定义，只是生成一个方案。当编译器使用模板定义的时候，会生成模板实例。实例化又分为隐式实例化和显式实例化。上述针对结构体job的```swap```模板函数就是显式实例化，因为它指定了要参数类型，而另外一个并没有指定，在编译器使用中才会根据代码上下文判断参数类型来进行隐式实例化。
+
+```C++
+// 显式实例化
+template void Swap<int> (int, int);
+
+// 显式具体化，下面两个声明等价
+template <> void Swap<int> (int &, int &);
+template <> void Swap(int &, int &);
+```
+
+注意显式实例化和显式具体化的区别。显式具体化的意思是：不要使用```Swap```模板来生成函数定义，而应该使用专门为```int```类型显示定义的函数定义。显式具体化必须有自己的函数定义，通常后面直接跟上```{}```开始函数定义，而显式实例化后面还要有单独的函数定义。
+
+隐式实例化、显式实例化和显式具体化统称为具体化。
+
+|         隐式实例化         |                显式实例化                |                         显式具体化                          |
+| :------------------------: | :--------------------------------------: | :---------------------------------------------------------: |
+|   template <typename T>    |    template void Swap<int>(int, int)     |          template <> void Swap<int>(int &, int &)           |
+| 在调用时产生具体的实例类型 | 类型在定义时已经确定，直接创建对应的实例 | 这种声明指定不用模板定义，而是用后面专门为int定义的函数定义 |
+
+```C++
+template <class T>
+void Swap (T &, T &);	// 函数模板
+
+// job结构的显式具体化
+template <> void Swap<job>(job &, job &);
+int main(void)
+{
+    // 显式实例化
+    template void Swap<char>(char &, char &);
+    
+    // short的隐式实例化
+    short a, b;
+    Swap(a, b);
+    
+    // job的显式具体化
+    job n, m;
+    Swap(n, m);
+    
+    // char的显式模板实例化
+    char g, h;
+    Swap(g, h);
+}
+```
+
+###  8.5.5 函数版本的选择
+
+函数重载解析 ：
+
+- 创建候选函数列表，其中包含与被调用函数的名称相同的函数和模板函数
+- 使用候选函数列表创建可行函数列表，这些都是参数数目正确的函数，为此会有一个隐式的转换序列
+- 确定是否有最佳的可行参数
+
+非模板 > 显式具体化 > 显示实例化 > 隐式实例化
+
+提升转换 > 标准转换 > 用户自定义转换
