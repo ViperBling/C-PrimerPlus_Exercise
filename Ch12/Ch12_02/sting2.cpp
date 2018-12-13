@@ -2,6 +2,7 @@
 // Created by tuser on 18-12-13.
 //
 #include <cstring>
+#include <cctype>
 #include "string2.h"
 
 int String::num_strings = 0;
@@ -118,4 +119,23 @@ istream & operator>>(istream & is, String &st) {
     while (is && is.get() != '\n')
         continue;
     return is;
+}
+
+void String::stringlow() {
+    for (int i = 0; i < len; i++)
+        str[i] = tolower(str[i]);
+}
+
+void String::stringup() {
+    for (int i = 0; i < len; i++)
+        str[i] = toupper(str[i]);
+}
+
+int String::has(const char ch) {
+    int count = 0;
+    for (int i = 0; i < len; i++){
+        if (str[i] == ch)
+            count++;
+    }
+    return count;
 }

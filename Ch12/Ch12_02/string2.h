@@ -18,7 +18,7 @@ private:
 
 public:
     String();
-    explicit String(const char * s);
+    String(const char * s);
     String(const String &);
     ~String();
     int length() const { return len; }
