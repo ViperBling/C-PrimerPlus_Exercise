@@ -1,3 +1,5 @@
+[TOC]
+
 # Chapter 10. 对象和类
 
 OOP：
