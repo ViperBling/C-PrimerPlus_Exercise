@@ -280,3 +280,192 @@ double harm(double a) throw(bad_thing);
 
 ### 15.3.6 栈解退
 
+如果`try`块没有直接调用引发异常的函数，而是使用调用了引发异常的函数，那么这个过程将涉及到栈解退。
+
+通常情况下，被调函数的返回地址保存在栈中，当被调函数执行完毕后，程序使用该地址来确定从哪里开始继续执行。同样，函数的一些参数，主要是自动变量也放在栈中。
+
+当函数出现异常时，程序也会释放栈中的内存，但是不会释放到函数的返回地址后停止，而是继续释放栈，直到找到一个位于`try`块中的返回地址。
+
+关于栈解退重要的一点：程序进行栈解退以回到能够捕获异常的地方时，将释放栈中的自动存储型变量，如果变量是类对象，将为对象调用析构函数。
+
+### 15.3.7 其他异常特性
+
+`throw-catch`的机制类似于函数返回的机制，但不同的是，函数返回后将控制权交到了调用函数。但是`throw`语句将控制权向上返回到第一个能够处理异常的`try-catch`组合。
+
+另一个特性就是，在`throw`返回时，总会创建一个拷贝，传递到`catch`。
+
+### 15.3.8 `exception`类
+
+`exception`头文件定义了`exception`类，可以把它作为其他异常类的基类。
+
+```C++
+#include <exception>
+class bad_hmean : public std::exception {
+public:
+    const char * what() { return "Bad arguments to hmean()"; }
+    ...
+};
+class bad_gmean : public std::exception {
+public:
+    const char * what() { return "Bad arguments to gmean()"; }
+    ...
+};
+```
+
+像上述代码定义继承的异常类后，就可以分别捕获它们对应的异常，也可以直接使用基类捕获异常。
+
+#### 1. `stdexcept`异常类
+
+头文件首先定义了`logic_error`和`runtime_error`类。这两个类为其他类的一系列派生类的基类。
+
+`logic_error`：
+
+- `domain_error`定义域错误，在数学函数传入参数值不在定义域内时引发异常
+- `invalid_argument`传入了意料之外的值
+- `length_error`用于指出没有没有足够的空间来执行操作
+- `out_of_bounds`用于指是索引错误。
+
+`runtime_error`：
+
+- `range_error`
+- `overflow_error`
+- `underflow_error`
+
+#### 2. `bad_alloc`异常和`new`
+
+对于使用`new`出现的问题，将导致`bad_alloc`异常。
+
+#### 3. 空指针和`new`
+
+### 15.3.9 异常、类和继承
+
+异常、类、继承以三种方式相互关联。首先，可以从一个异常类派生出另一个；其次，可以在类中定义嵌套异常类声明来组合异常；第三，这种嵌套的声明本身可以被继承，还可以用作基类。
+
+```C++
+#ifndef C_PRIMER_SALES_H
+#define C_PRIMER_SALES_H
+
+#include <stdexcept>
+#include <string>
+
+class Sales {
+public:
+    enum {MONTHS = 12};
+    class bad_index : public std::logic_error {		// 继承自logic_error
+    private:
+        int bi;
+    public:
+        explicit bad_index(int ix, const std::string & s = "Index error in Sales object\n");
+        int bi_val() const { return bi; }
+        virtual ~bad_index() throw() {}
+    };	// end bad_index
+    
+    explicit Sales(int yy = 0);
+    Sales(int yy, const double * gr, int n);
+    virtual ~Sales() {}
+    int Year() const { return year; }
+    virtual double operator[](int r) const;
+    virtual double  &operator[](int i);
+
+private:
+    double gross[MONTHS];
+    int year;
+};
+
+class LabeledSales : public Sales {
+public:
+    class nbad_index : public Sales::bad_index {
+    private:
+        std::string lbl;
+    public:
+        nbad_index(const std::string & lb, int ix,
+                   const std::string & s = "Index error in LabeledSales object\n");
+        const std::string & label_val() const { return lbl; }
+        virtual ~nbad_index() throw() {}
+    };	// end nbad_index
+    
+    explicit LabeledSales(const std::string & lb = "none", int yy = 0);
+    LabeledSales(const std::string & lb, int yy, const double * gr, int n);
+    virtual ~LabeledSales() {}
+    const std::string & Label() const { return label; }
+    virtual double operator[](int i) const;
+    virtual double &operator[](int i);
+
+private:
+    std::string label;
+};
+
+#endif //C_PRIMER_SALES_H
+```
+
+上面`Sales`类中嵌套定义了一个`bad_index`异常类。然后`Sales`作为一个整体被`LabeledSales`类继承了下来，它的嵌套异常类`bad_index`也被`nbad_index`继承，并嵌套定义在了`LabeledSales`类中。
+
+### 15.3.10 异常何时会迷失方向
+
+#### 1. 未捕获异常
+
+异常不是在函数中引发的，且没有被捕获（没有匹配的`try`或`catch`）成为未捕获异常。可以通过包含头文件`exception`，并设置终止函数的方法来捕获。正常情况下，终止函数`terminate()`调用`abort()`，可以将`abort()`修改为其他函数。
+
+#### 2. 意外异常
+
+如果异常类型和规范列表中的异常类型不匹配，则出现意外异常。
+
+### 15.3.11 注意事项
+
+由于出现异常会导致程序提前返回，那么本该进行`delete`操作的一些变量可能就不会被销毁，导致内存泄漏。
+
+## 15.4 RTTI（Runtime Type Identification）
+
+RTTI，运行阶段类型识别。
+
+### 15.4.1 RTTI用途
+
+对于从一个基类派生出来的一些类而言，可以创建派生类的一个对象，然后让基类指针指向派生类对象。那么表面上看，这个指针的类型是基类，那么它具体指向了哪一个派生类呢？这就牵扯到类型的概念，需要用到RTTI。
+
+### 15.4.2 RTTI的工作原理
+
+- `dynamic_cast`运算符将使用一个指向基类的指针来生成一个指向派生类的指针，生成失败返回空指针。
+- `typeid`运算符返回一个指出对象的类型的值
+- `type_info`结构存储了有关特定类型的信息
+
+**WARNING**：RTTI只适用于包含虚函数的类
+
+#### 1. `dynamic_cast`运算符
+
+`dynamic_cast`运算符可以回答：是否可以安全地将对象的地址赋给特定类型的指针这类问题。假设有如下类层次结构：
+
+```C++
+class Grand {};
+class Superb : public Grand {};
+class Magnificent : public Superb {};
+
+Grand * pg = new Grand;
+Grand * ps = new Superb;
+Grand * pm = new Magnificent;
+```
+
+使用`dynamic_cast`：
+
+```C++
+Superb * pm = dynamic_cast<Superb *>(pg);
+```
+
+上述语句的意思是，`pg`能否被安全的转换为`Superb`类型，如果可以，返回对象地址，不行，返回空指针。
+
+#### 2. `typeid`运算符和`type_info`类
+
+`typeid`运算符能够确定两个对象是否为同种类型。
+
+```C++
+typeid(Magnificent) == typeid(*pg);
+```
+
+## 15.5 类型转换运算符
+
+- `dynamic_cast`
+- `const_cast`，改变修改属性，变为`const`或`volatile`。
+- `static_cast`
+- `reinterpret_cast`
+
+
+
