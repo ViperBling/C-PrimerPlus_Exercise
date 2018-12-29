@@ -216,3 +216,44 @@ scores.erase(scores.begin(), scores.begin() + 2);	// 删除begin和begin+1指向
 ```
 
 `insert()`方法和`erase()`方法相反，向指定位置插入元素。
+
+### 16.3.3 对矢量可执行的其他操作
+
+- `for_each()`接收三个参数，前两个是定义容器中区间的迭代器，最后一个是指向函数的指针：
+
+  ```C++
+  vector<Review>::iterator pr;
+  for (pr = books.begin(); pr != books.end(); pr++)
+      ShowReview(*pr);
+  // 替换为for_each
+  for_each(books.begin(), books.end(), ShowReview);
+  ```
+
+- `random_shuffle()`函数接收两个指定区间的迭代器参数，并随机排列该区间中的元素。
+
+- `sort()`函数要求容器支持随机访问。有两个版本，一个接收两个区间参数，然后排序。另一个接收三个参数，前两个是区间参数，最后一个是函数指针。
+
+### 16.3.4 基于范围的for循环（C++11）
+
+```C++
+for_each(books.begin(), books.end(), ShowReview);
+
+// 替换为
+for (auto x : books) ShowReview(x);
+
+// 如果希望修改x
+for (auto & x : books) ShowReview(x);
+```
+
+## 16.4 泛型编程
+
+STL是一种泛型编程（generic programming）。泛型编程关注的是算法，它旨在编写独立于数据类型的代码，在C++中通过模板实现。
+
+### 16.4.1 为何使用迭代器
+
+模板使得算法独立于数据的存储类型，而迭代器使得算法独立于使用的容器类型，它独立于容器本身的数据结构。
+
+STL中每个容器类（`vector`、`list`、`deque`等）都有相应的迭代器类型，其中提供了必要的操作（*和++等）。其次，每个容器类都有一个超尾标记，当迭代器递增到超越容器的最后一个值后，这个值将被赋值给迭代器。
+
+### 16.4.2 迭代器类型
+
